@@ -1,6 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_hello/create_contact_page.dart';
+import 'package:flutter_hello/fragments/list_contact_fragment.dart';
+import 'package:flutter_hello/pages/login_page.dart';
 import 'package:http/http.dart' as http;
 
 void main() {
@@ -31,9 +34,50 @@ class MyApp extends StatelessWidget {
         //
         // This works for code too, not just values: Most code changes can be
         // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const LoginPage(
+
+      ),
+    );
+  }
+}
+
+class MyOtherHomePage extends StatelessWidget {
+
+  final String title;
+  final Color backgroundColor;
+
+  const MyOtherHomePage({
+    super.key,
+    required this.title,
+    required this.backgroundColor,
+  });
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(title),
+        backgroundColor: backgroundColor,
+      ),
+      body: Center(
+        child: ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => MyHomePage(
+                      title: 'Flutter Demo Home Page',
+                    )
+                ),
+              );
+            },
+            child: Text("Cambio de pantalla")
+        )
+      ),
+
     );
   }
 }
@@ -58,6 +102,8 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
+  int _currentIndex = 0;
+
   List<dynamic> _data = [];
 
   @override
@@ -88,6 +134,15 @@ class _MyHomePageState extends State<MyHomePage> {
 
   }
 
+  Widget getBody() {
+    if (_currentIndex == 0) {
+      return Text("Vista 0");
+    } if (_currentIndex == 1) {
+      return Text("Vista 1");
+    }
+    return ListContactFragment(data: _data);
+  }
+
   @override
   Widget build(BuildContext context) {
     // This method is rerun every time setState is called, for instance as done
@@ -98,34 +153,44 @@ class _MyHomePageState extends State<MyHomePage> {
     // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: ListView.builder(
-          itemCount: _data.length,
-          itemBuilder: (context, index) {
-            final item  = _data[index];
-            return ListTile(
-              title: Text(item['name'] ?? 'No Name'),
-              subtitle: Text(item['email'] ?? 'No Email'),
-              leading: CircleAvatar(
-                backgroundImage: NetworkImage(item['avatar'] ?? ''),
-              ),
-              onTap: () {
-                print('Tapped on ${item['name']}');
-              },
-            );
-        }),
-      ),
-
+      body: getBody(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CreateContactPage(),
+            ),
+          );
+        },
+        tooltip: 'Crear Contacto',
+        child: const Icon(Icons.add),
+      ), // This trailing comma makes auto-formatting nicer for build methods.
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Profile',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
+        ],
+      )
     );
   }
 }
