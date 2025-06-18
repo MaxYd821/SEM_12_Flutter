@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_hello/create_contact_page.dart';
 import 'package:flutter_hello/fragments/list_contact_fragment.dart';
+import 'package:flutter_hello/pages/NuevaTareaForm.dart';
 import 'package:flutter_hello/pages/camarademo.dart';
 import 'package:flutter_hello/pages/login_page.dart';
 import 'package:http/http.dart' as http;
@@ -37,7 +38,7 @@ class MyApp extends StatelessWidget {
         // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
       ),
-      home: const CameraDemoPage(
+      home: NuevaTareaForm(
 
       ),
     );

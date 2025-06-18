@@ -5,6 +5,7 @@
     <application
         android:label="flutter_hello"
         android:name="${applicationName}"
+        android:usesCleartextTraffic="true"
         android:icon="@mipmap/ic_launcher">
 
         <use-permission android:name="android.permission.INTERNET"/>
