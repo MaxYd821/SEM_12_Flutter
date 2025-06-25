@@ -76,6 +76,13 @@ class _ListaTareasScreenState extends State<ListaTareasScreen> {
       ),
       body: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              'Cantidad de tareas: ${tareasFiltradas.length}',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [

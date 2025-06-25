@@ -8,7 +8,87 @@ import 'package:flutter_hello/pages/camarademo.dart';
 import 'package:flutter_hello/pages/login_page.dart';
 import 'package:http/http.dart' as http;
 
+
 void main() {
+  runApp(ProjectListApp());
+}
+
+class ProjectListApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Jira Projects',
+      home: ProjectListScreen(),
+    );
+  }
+}
+
+class ProjectListScreen extends StatefulWidget {
+  @override
+  _ProjectListScreenState createState() => _ProjectListScreenState();
+}
+
+class _ProjectListScreenState extends State<ProjectListScreen> {
+  late Future<List<String>> _projects;
+
+  @override
+  void initState() {
+    super.initState();
+    _projects = fetchProjectNames();
+  }
+
+  Future<List<String>> fetchProjectNames() async {
+    final url = Uri.parse('https://jiraupn.atlassian.net/rest/api/2/project');
+
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Basic YXJ0dXJvLnVwbmNhakBnbWFpbC5jb206QVRBVFQzeEZmR0YwZFp0T3pkNFVZYVBFbGNZX2lsZEpqbE96em5tMXdIaC1jenB1SDRUWVBQSFN4TkVoUkY0WGdoSlJ4aEJEWHBSSE1UMENxZ0JiUEVHbVRwZXpubmNrSnRCNXBVM2NfSzFJWWgtMktFQzRsb3BGUVB5QmM2dDZIOFExcGlzYWNlaUh3WFR4V25od0ZaVVAwdlZ2X3hiS096VEI5V1RyODBwV05UV0ZWME5NVVdNPUQ0REEyRkNG', // reemplaza con tu token
+        'Accept': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      // Convertimos la respuesta del cuerpo en un JSON
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map<String>((project) => project['name'] as String).toList();
+    } else {
+      throw Exception('Error al cargar los proyectos: ${response.statusCode}');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Proyectos Jira')),
+      body: FutureBuilder<List<String>>(
+        future: _projects,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return Center(child: Text('No hay proyectos.'));
+          }
+
+          final projectNames = snapshot.data!;
+
+          return ListView.builder(
+            itemCount: projectNames.length,
+            itemBuilder: (context, index) {
+              return ListTile(
+                title: Text(projectNames[index]),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+/*void main() {
   runApp(const MyApp());
 }
 
@@ -195,4 +275,4 @@ class _MyHomePageState extends State<MyHomePage> {
       )
     );
   }
-}
+}*/
