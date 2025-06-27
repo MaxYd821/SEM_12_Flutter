@@ -1,13 +1,10 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_hello/create_contact_page.dart';
-import 'package:flutter_hello/fragments/list_contact_fragment.dart';
-import 'package:flutter_hello/pages/NuevaTareaForm.dart';
-import 'package:flutter_hello/pages/camarademo.dart';
-import 'package:flutter_hello/pages/login_page.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_hello/widgets/CrearTicketScreen.dart';
 
+import 'TicketsScreen.dart';
 
 void main() {
   runApp(ProjectListApp());
@@ -18,6 +15,11 @@ class ProjectListApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Jira Projects',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primarySwatch: Colors.indigo,
+        scaffoldBackgroundColor: Colors.grey[100],
+      ),
       home: ProjectListScreen(),
     );
   }
@@ -29,39 +31,76 @@ class ProjectListScreen extends StatefulWidget {
 }
 
 class _ProjectListScreenState extends State<ProjectListScreen> {
-  late Future<List<String>> _projects;
+  late Future<List<Map<String, String>>> _projects;
 
   @override
   void initState() {
     super.initState();
-    _projects = fetchProjectNames();
+    _projects = cargarProyectos();
   }
 
-  Future<List<String>> fetchProjectNames() async {
-    final url = Uri.parse('https://jiraupn.atlassian.net/rest/api/2/project');
+  Future<List<Map<String, String>>> cargarProyectos() async {
+    try {
+      final proyectos = await fetchProjects();
+      await guardarProyectosLocalmente(proyectos);
+      return proyectos;
+    } catch (_) {
+      return await cargarProyectosLocalmente();
+    }
+  }
 
+  Future<List<Map<String, String>>> fetchProjects() async {
+    final url = Uri.parse('https://jiraupn.atlassian.net/rest/api/2/project');
     final response = await http.get(
       url,
       headers: {
-        'Authorization': 'Basic YXJ0dXJvLnVwbmNhakBnbWFpbC5jb206QVRBVFQzeEZmR0YwZFp0T3pkNFVZYVBFbGNZX2lsZEpqbE96em5tMXdIaC1jenB1SDRUWVBQSFN4TkVoUkY0WGdoSlJ4aEJEWHBSSE1UMENxZ0JiUEVHbVRwZXpubmNrSnRCNXBVM2NfSzFJWWgtMktFQzRsb3BGUVB5QmM2dDZIOFExcGlzYWNlaUh3WFR4V25od0ZaVVAwdlZ2X3hiS096VEI5V1RyODBwV05UV0ZWME5NVVdNPUQ0REEyRkNG', // reemplaza con tu token
+        'Authorization': 'Basic YXJ0dXJvLnVwbmNhakBnbWFpbC5jb206QVRBVFQzeEZmR0YwZFp0T3pkNFVZYVBFbGNZX2lsZEpqbE96em5tMXdIaC1jenB1SDRUWVBQSFN4TkVoUkY0WGdoSlJ4aEJEWHBSSE1UMENxZ0JiUEVHbVRwZXpubmNrSnRCNXBVM2NfSzFJWWgtMktFQzRsb3BGUVB5QmM2dDZIOFExcGlzYWNlaUh3WFR4V25od0ZaVVAwdlZ2X3hiS096VEI5V1RyODBwV05UV0ZWME5NVVdNPUQ0REEyRkNG', // tu token real
         'Accept': 'application/json',
       },
     );
 
     if (response.statusCode == 200) {
-      // Convertimos la respuesta del cuerpo en un JSON
       final List<dynamic> data = jsonDecode(response.body);
-      return data.map<String>((project) => project['name'] as String).toList();
+      return data.map<Map<String, String>>((project) => {
+        'key': project['key'],
+        'name': project['name'],
+      }).toList();
     } else {
-      throw Exception('Error al cargar los proyectos: ${response.statusCode}');
+      throw Exception('Error al cargar los proyectos');
+    }
+  }
+
+  Future<void> guardarProyectosLocalmente(List<Map<String, String>> proyectos) async {
+    final prefs = await SharedPreferences.getInstance();
+    final String proyectosJson = jsonEncode(proyectos);
+    await prefs.setString('proyectos_guardados', proyectosJson);
+  }
+
+  Future<List<Map<String, String>>> cargarProyectosLocalmente() async {
+    final prefs = await SharedPreferences.getInstance();
+    final proyectosJson = prefs.getString('proyectos_guardados');
+    if (proyectosJson != null) {
+      final List<dynamic> lista = jsonDecode(proyectosJson);
+      return lista.cast<Map<String, dynamic>>().map((map) {
+        return {
+          'key': map['key'].toString(),
+          'name': map['name'].toString(),
+        };
+      }).toList();
+    } else {
+      return [];
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Proyectos Jira')),
-      body: FutureBuilder<List<String>>(
+      appBar: AppBar(
+        title: Text('Proyectos Jira'),
+        centerTitle: true,
+        elevation: 0,
+      ),
+      body: FutureBuilder<List<Map<String, String>>>(
         future: _projects,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -69,24 +108,67 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
           } else if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text('No hay proyectos.'));
+            return Center(child: Text('No hay proyectos disponibles.'));
           }
 
-          final projectNames = snapshot.data!;
+          final projects = snapshot.data!;
 
           return ListView.builder(
-            itemCount: projectNames.length,
+            padding: EdgeInsets.all(12),
+            itemCount: projects.length,
             itemBuilder: (context, index) {
-              return ListTile(
-                title: Text(projectNames[index]),
+              final project = projects[index];
+              return Card(
+                elevation: 3,
+                margin: EdgeInsets.symmetric(vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ListTile(
+                  leading: Icon(Icons.folder_open, color: Colors.indigo),
+                  title: Text(
+                    project['name']!,
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => TicketsScreen(projectKey: project['key']!),
+                      ),
+                    );
+                  },
+                ),
               );
             },
           );
         },
       ),
+      floatingActionButton: FutureBuilder<List<Map<String, String>>>(
+        future: _projects,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+            return FloatingActionButton(
+              backgroundColor: Colors.indigo,
+              child: Icon(Icons.add),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CrearTicketScreen(proyectos: snapshot.data!),
+                  ),
+                );
+              },
+            );
+          }
+          return SizedBox.shrink();
+        },
+      ),
     );
   }
 }
+
 
 /*void main() {
   runApp(const MyApp());
